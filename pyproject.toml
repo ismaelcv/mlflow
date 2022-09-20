@@ -1,0 +1,55 @@
+[build-system]
+# Minimum requirements for the build system to execute. (see https://www.python.org/dev/peps/pep-0518/)
+requires = ["setuptools", "wheel"]  # PEP 508 specifications.
+
+[tool.pylint.message_control]
+disable = [
+    "fixme",                     # Because else it doesnt allow to add TODO: comments
+    "missing-module-docstring",  # We dont really need doctrings in all modules
+    "invalid-name",              # We dont need pyling messing with our name conventions
+    "super-init-not-called",     # Do not require to call the base class all the time
+    "arguments-differ",          # Else not possible to change args on child classes
+    "consider-using-dict-items", # not necessary to use dict.items() all the time
+]
+
+
+[tool.pylint.similarities]
+# Minimum lines number of a similarity.
+min-similarity-lines=10
+max-args = 7
+ignore-comments = true
+ignore-imports = true
+
+[tool.pylint.'MESSAGES CONTROL']
+extension-pkg-whitelist = "pydantic"
+
+[tool.poetry]
+name = "mlflow"
+version = "0.0.0"
+description = "Main Repo of mlflow"
+authors = ["Ismael Cabral <ismael.cabral@source.ag>"]
+
+[tool.poetry.dependencies]
+python = ">=3.9, <3.11"
+pre-commit = "^2.20.0"
+dash = "^2.6.1"
+black = "^22.8.0"
+pylint = "^2.15.2"
+dash-bootstrap-components = "^1.2.1"
+functions = "^0.7.0"
+gunicorn = "^20.1.0"
+
+
+[tool.black]
+line-length = 120
+preview = true
+target-version = ['py310']
+
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
+
+[tool.poetry.scripts]
+drydown_app = "arthur_explorer.apps.drydown_results:run_app"
