@@ -41,18 +41,23 @@ def define_training_content() -> list:
                         html.Br(),
                         dbc.Label("Select Dataset:"),
                         dcc.Dropdown(id="dataset_dropdown"),
-                        html.Br(),
+                        # html.Br(),
                         dbc.Label("Select timestamp column:"),
                         dcc.Dropdown(id="timestamp_dropdown"),
-                        html.Br(),
+                        # html.Br(),
                         dbc.Label("Select categorical variables:"),
                         dcc.Dropdown(id="categorical_dropdown", multi=True),
-                        html.Br(),
+                        # html.Br(),
                         dbc.Label("Select numerical variables:"),
                         dcc.Dropdown(id="numerical_dropdown", multi=True),
                     ]
                 ),
-                dbc.Col(),
+                dbc.Col(
+                    [
+                        dbc.Label("Select number of crossval sets:"),
+                        dcc.Slider(min=3, max=10, value=5, id="cv_slider"),
+                    ]
+                ),
                 dbc.Col(),
             ]
         )
@@ -77,6 +82,7 @@ dashApp = dashApp.add_controls(define_app_controls()).add_training_content(defin
         Input("timestamp_dropdown", "value"),
         Input("categorical_dropdown", "value"),
         Input("numerical_dropdown", "value"),
+        Input("cv_slider", "value"),
     ],
 )
 def update_training_panel(
@@ -84,8 +90,8 @@ def update_training_panel(
     timestamp_column: str,
     categorical_variables: list,
     numerical_variables: list,
+    no_of_cv_sets: float,
 ) -> Tuple[list, str, list, str, list, list, list, list]:
-
     """
     Update the training panel
     """
