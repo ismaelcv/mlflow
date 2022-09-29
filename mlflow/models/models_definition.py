@@ -1,7 +1,6 @@
-from sklearn.linear_model import LinearRegression
+# from sklearn.linear_model import LinearRegression
 
-
-MODEL_CONFIGS = {"generic_v2": {"description": ""}}
+# MODEL_CONFIGS = {"generic_v2": {"description": ""}}
 
 
 # ModelConfig(

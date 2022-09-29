@@ -1,9 +1,9 @@
-import pandas as pd
-from sklearn.preprocessing import LabelEncoder
-from sklearn.preprocessing import MinMaxScaler
 import random
-from typing import Union, Tuple
+from typing import Tuple, Union
+
 import numpy as np
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 
 
 def enforce_ts_completeness(X: pd.DataFrame, freq: str) -> pd.DataFrame:
@@ -65,7 +65,10 @@ def scale_variables(X_y: pd.DataFrame) -> pd.DataFrame:
     return X_y, scalers
 
 
-def split_in_CV_sets(X_y: pd.DataFrame, n_splits: int, val_size_perc: int = 0.1) -> dict:
+def split_in_CV_sets(X_y: pd.DataFrame, n_splits: int, val_size_perc: float = 0.1) -> dict:
+    """
+    CV Split
+    """
     X_y_dict = {}
 
     df_size = len(X_y)
@@ -82,6 +85,10 @@ def split_in_CV_sets(X_y: pd.DataFrame, n_splits: int, val_size_perc: int = 0.1)
 
 
 def create_X_and_y_per_cv_split(X_y_dict: dict) -> dict:
+    """
+    Split in cv
+
+    """
     for item, X_y in X_y_dict.items():
         X_y = X_y["X_y"].sort_values("ts").reset_index(drop=True).drop(columns=["ts"])
 
@@ -128,10 +135,14 @@ def create_supervised_split(
     number_of_training_samples: int,
     number_of_testing_samples: int,
     target_variable: str,
-    days_of_training: float,
-    days_of_prediction: float,
+    days_of_training: int,
+    days_of_prediction: int,
     observations_per_hour: int,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+
+    """
+    split for lstm
+    """
     train_to_test_ratio = number_of_training_samples / (number_of_training_samples + number_of_testing_samples)
 
     X_y_train = X_y.iloc[: int(len(X_y) * train_to_test_ratio)]
@@ -166,6 +177,10 @@ def create_supervised_array(
     days_of_prediction: int,
     observations_per_hour: int,
 ) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    something i will fix later
+    """
+
     no_of_obs_per_sample = days_of_training * 24 * observations_per_hour
     no_of_obs_to_predict = days_of_prediction * 24 * observations_per_hour
 

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import os
-import pathlib
 
 import dash
 import dash_bootstrap_components as dbc
 import pandas as pd
 from dash import dcc, html
+
+# import pathlib
 
 
 class BaseDashApp:  # pylint: disable = too-many-instance-attributes
@@ -30,20 +31,6 @@ class BaseDashApp:  # pylint: disable = too-many-instance-attributes
         This elements need to be defined as a list of lists
         """
         self.controls = controls
-
-        return self
-
-    def set_experiment_name(self, experiment_name: str) -> BaseDashApp:
-        """
-        Using this function you can add control functionality to the app
-        Thigs like labels, spaces, inputs, checkboxes etc
-        This elements need to be defined as a list of lists
-        """
-        self.experiment_name = experiment_name
-        self.load_X_y()
-        self.load_experiment_overview()
-        self.load_counterfactual_precalculated_curves()
-        self.load_experiment_metrics()
 
         return self
 
