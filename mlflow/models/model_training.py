@@ -1,2 +1,2 @@
-def train(model_definition: dict, data:dict):
+def train(model_definition: dict, data: dict):
     return

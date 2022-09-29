@@ -44,6 +44,10 @@ def define_training_content() -> list:
                         html.Br(),
                         dbc.Label("Select timestamp column:"),
                         dcc.Dropdown(id="timestamp_dropdown"),
+                        html.Br(),
+                        dbc.Label("Select categorical variables:"),
+                        dcc.Dropdown(id="categorical_dropdown", multi=True),
+                        
                     ]
                 ),
                 dbc.Col(),
@@ -62,24 +66,46 @@ dashApp = dashApp.add_controls(define_app_controls()).add_training_content(defin
     Output("dataset_dropdown", "value"),
     Output("timestamp_dropdown", "options"),
     Output("timestamp_dropdown", "value"),
+    Output("categorical_dropdown", "options"),
+    Output("categorical_dropdown", "value"),
     [
         Input("dataset_dropdown", "value"),
         Input("timestamp_dropdown", "value"),
+        Input("categorical_dropdown", "value"),
     ],
 )
 def update_training_panel(
     dataset_filename: str,
     timestamp_column: str,
-) -> Tuple[list, str, list, str]:
+    categorical_variables: list,
+) -> Tuple[list, str, list, str, list, str]:
     """
     Update the training panel
     """
 
-    panel_outcome = []
-    panel_outcome += _load_dataset(dataset_filename)
-    panel_outcome += _select_timestamp_column(timestamp_column)
+    panel_outcome = (
+        _load_dataset(dataset_filename)
+        + _select_timestamp_column(timestamp_column)
+        + _select_categorical_variables(categorical_variables)
+    )
 
     return tuple(panel_outcome)
+
+
+def _select_categorical_variables(categorical_variables: str):
+    """
+    This function looks for parquet in the specified folder
+    """
+
+    col_list = [item[0] for item in dashApp.X_y.dtypes.items() if item[1] not in ["datetime64[ns]", "float", "int"]]
+
+    if len(col_list) == 0:
+        return [], []
+
+    if categorical_variables is None:
+        categorical_variables = []
+
+    return col_list, categorical_variables
 
 
 def _select_timestamp_column(timestamp_column: str):
@@ -87,9 +113,7 @@ def _select_timestamp_column(timestamp_column: str):
     This function looks for parquet in the specified folder
     """
 
-
-    col_list = dashApp.X_y.columns
-
+    col_list = [item[0] for item in dashApp.X_y.dtypes.items() if item[1] == "datetime64[ns]"]
 
     if len(col_list) == 0:
         return [], ""

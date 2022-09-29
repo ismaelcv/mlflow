@@ -9,8 +9,6 @@ import pandas as pd
 from dash import dcc, html
 
 
-
-
 class BaseDashApp:  # pylint: disable = too-many-instance-attributes
     """
     Class to elegantly costruct a dash app

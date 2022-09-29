@@ -218,5 +218,3 @@ def update_list_in_dict(dictionary: dict, keys: list, value: Union[str, int, flo
 
     updated_list = retrieve_dict_values(dictionary, keys) + [value]
     update_nested_list_in_dict(dictionary, keys, updated_list)
-
-
