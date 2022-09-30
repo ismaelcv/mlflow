@@ -4,16 +4,12 @@ from typing import Tuple
 
 import dash_bootstrap_components as dbc
 import pandas as pd
-
 import plotly.graph_objects as go
 from dash import dcc, html
 from dash.dependencies import Input, Output
+from plotly.subplots import make_subplots
 
 from mlflow.apps.BaseDashApp import BaseDashApp
-
-from plotly.subplots import make_subplots
-import time
-
 
 DATASETS_PATH = pathlib.Path(__file__).parents[2] / "data" / "datasets"
 
@@ -42,15 +38,14 @@ def define_training_content() -> list:
                         html.Br(),
                         dbc.Label("Select Dataset:"),
                         dcc.Dropdown(id="dataset_dropdown"),
-                        # html.Br(),
                         dbc.Label("Select timestamp column:"),
                         dcc.Dropdown(id="timestamp_dropdown"),
-                        # html.Br(),
                         dbc.Label("Select categorical variables:"),
                         dcc.Dropdown(id="categorical_dropdown", multi=True),
-                        # html.Br(),
                         dbc.Label("Select numerical variables:"),
                         dcc.Dropdown(id="numerical_dropdown", multi=True),
+                        dbc.Label("Select target variable:"),
+                        dcc.Dropdown(id="target_dropdown"),
                     ]
                 ),
                 dbc.Col(
@@ -84,11 +79,14 @@ dashApp = dashApp.add_controls(define_app_controls()).add_training_content(defin
     Output("categorical_dropdown", "value"),
     Output("numerical_dropdown", "options"),
     Output("numerical_dropdown", "value"),
+    Output("target_dropdown", "options"),
+    Output("target_dropdown", "value"),
     [
         Input("dataset_dropdown", "value"),
         Input("timestamp_dropdown", "value"),
         Input("categorical_dropdown", "value"),
         Input("numerical_dropdown", "value"),
+        Input("target_dropdown", "value"),
         Input("cv_slider", "value"),
     ],
 )
@@ -97,8 +95,9 @@ def update_training_panel(
     timestamp_column: str,
     categorical_variables: list,
     numerical_variables: list,
+    target_variable: str,
     no_of_cv_sets: float,
-) -> Tuple[make_subplots, list, str, list, str, list, list, list, list]:
+) -> Tuple[make_subplots, list, str, list, str, list, list, list, list, list, str]:
     """
     Update the training panel
     """
@@ -109,6 +108,7 @@ def update_training_panel(
         + _select_timestamp_column(timestamp_column)
         + _select_categorical_variables(categorical_variables)
         + _select_numerical_variables(numerical_variables)
+        + _select_target_variable(target_variable)
     )
 
     return tuple(panel_outcome)  # type: ignore
@@ -134,8 +134,23 @@ def _plot_cv_sets(n_cv_sets: int) -> list:
     for trace in traces_to_plot:
         cv_fig.add_trace(go.Scatter(**trace))
 
-
     return [cv_fig]
+
+
+def _select_target_variable(target_variable: str) -> list:
+    """
+    This function alllows the selection of the target variable
+    """
+
+    col_list = [item[0] for item in dashApp.X_y.dtypes.items() if item[1] in ["float", "int"]]
+
+    if len(col_list) == 0:
+        return [[], ""]
+
+    if target_variable is None:
+        target_variable = ""
+
+    return [col_list, target_variable]
 
 
 def _select_numerical_variables(numerical_variables: list) -> list:
