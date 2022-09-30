@@ -5,13 +5,14 @@ from typing import Tuple
 import dash_bootstrap_components as dbc
 import pandas as pd
 
-# import plotly.graph_objects as go
+import plotly.graph_objects as go
 from dash import dcc, html
 from dash.dependencies import Input, Output
 
 from mlflow.apps.BaseDashApp import BaseDashApp
 
-# from plotly.subplots import make_subplots
+from plotly.subplots import make_subplots
+import time
 
 
 DATASETS_PATH = pathlib.Path(__file__).parents[2] / "data" / "datasets"
@@ -54,8 +55,13 @@ def define_training_content() -> list:
                 ),
                 dbc.Col(
                     [
-                        dbc.Label("Select number of crossval sets:"),
-                        dcc.Slider(min=3, max=10, value=5, id="cv_slider"),
+                        dbc.Row([dcc.Graph(id="cv_graph", style={"height": "30vh", "width": "100%"})]),
+                        dbc.Row(
+                            [
+                                dbc.Label("Select number of crossval sets:"),
+                                dcc.Slider(min=3, max=10, value=5, id="cv_slider"),
+                            ]
+                        ),
                     ]
                 ),
                 dbc.Col(),
@@ -69,6 +75,7 @@ dashApp = dashApp.add_controls(define_app_controls()).add_training_content(defin
 
 
 @dashApp.app.callback(
+    Output("cv_graph", "figure"),
     Output("dataset_dropdown", "options"),
     Output("dataset_dropdown", "value"),
     Output("timestamp_dropdown", "options"),
@@ -91,13 +98,14 @@ def update_training_panel(
     categorical_variables: list,
     numerical_variables: list,
     no_of_cv_sets: float,
-) -> Tuple[list, str, list, str, list, list, list, list]:
+) -> Tuple[make_subplots, list, str, list, str, list, list, list, list]:
     """
     Update the training panel
     """
 
     panel_outcome = (
-        _load_dataset(dataset_filename)
+        _plot_cv_sets(int(no_of_cv_sets))
+        + _load_dataset(dataset_filename)
         + _select_timestamp_column(timestamp_column)
         + _select_categorical_variables(categorical_variables)
         + _select_numerical_variables(numerical_variables)
@@ -106,7 +114,31 @@ def update_training_panel(
     return tuple(panel_outcome)  # type: ignore
 
 
-def _select_numerical_variables(numerical_variables: list) -> Tuple[list, list]:
+def _plot_cv_sets(n_cv_sets: int) -> list:
+    cv_fig = make_subplots()
+
+    if len(dashApp.X_y) == 0:
+        return [cv_fig]
+
+    traces_to_plot = [
+        {
+            "x": [dashApp.X_y.ts.min(), dashApp.X_y.ts.max()],
+            "y": [i + 1, i + 1],
+            "line_color": "#1890ff",
+            "mode": "lines",
+            "line_width": 2,
+        }
+        for i in range(n_cv_sets)
+    ]
+
+    for trace in traces_to_plot:
+        cv_fig.add_trace(go.Scatter(**trace))
+
+
+    return [cv_fig]
+
+
+def _select_numerical_variables(numerical_variables: list) -> list:
     """
     This function looks for parquet in the specified folder
     """
@@ -114,15 +146,15 @@ def _select_numerical_variables(numerical_variables: list) -> Tuple[list, list]:
     col_list = [item[0] for item in dashApp.X_y.dtypes.items() if item[1] in ["float", "int"]]
 
     if len(col_list) == 0:
-        return [], []
+        return [[], []]
 
     if numerical_variables is None:
         numerical_variables = []
 
-    return col_list, numerical_variables
+    return [col_list, numerical_variables]
 
 
-def _select_categorical_variables(categorical_variables: list) -> Tuple[list, list]:
+def _select_categorical_variables(categorical_variables: list) -> list:
     """
     This function looks for parquet in the specified folder
     """
@@ -130,15 +162,15 @@ def _select_categorical_variables(categorical_variables: list) -> Tuple[list, li
     col_list = [item[0] for item in dashApp.X_y.dtypes.items() if item[1] not in ["datetime64[ns]", "float", "int"]]
 
     if len(col_list) == 0:
-        return [], []
+        return [[], []]
 
     if categorical_variables is None:
         categorical_variables = []
 
-    return col_list, categorical_variables
+    return [col_list, categorical_variables]
 
 
-def _select_timestamp_column(timestamp_column: str):
+def _select_timestamp_column(timestamp_column: str) -> list:
     """
     This function looks for parquet in the specified folder
     """
@@ -146,15 +178,15 @@ def _select_timestamp_column(timestamp_column: str):
     col_list = [item[0] for item in dashApp.X_y.dtypes.items() if item[1] == "datetime64[ns]"]
 
     if len(col_list) == 0:
-        return [], ""
+        return [[], ""]
 
     if timestamp_column is None:
         timestamp_column = ""
 
-    return col_list, timestamp_column
+    return [col_list, timestamp_column]
 
 
-def _load_dataset(dataset_filename: str):
+def _load_dataset(dataset_filename: str) -> list:
     """
     This function looks for parquet in the specified folder
     """
@@ -162,10 +194,10 @@ def _load_dataset(dataset_filename: str):
     dataset_list = [file for file in os.listdir(DATASETS_PATH) if file.endswith(".parquet")]
 
     if dataset_list == []:
-        return [], ""
+        return [[], ""]
 
     if dataset_filename == dashApp.dataset_filename:
-        return dataset_list, dataset_filename
+        return [dataset_list, dataset_filename]
 
     if dataset_filename is None:
         dataset_filename = dataset_list[0]
@@ -173,7 +205,7 @@ def _load_dataset(dataset_filename: str):
     dashApp.X_y = pd.read_parquet(DATASETS_PATH / dataset_filename)
     dashApp.dataset_filename = dataset_filename
 
-    return dataset_list, dataset_filename
+    return [dataset_list, dataset_filename]
 
 
 def run_app() -> None:
@@ -181,7 +213,6 @@ def run_app() -> None:
     Helper function to call the app.run_server() function with poetry
     """
     dashApp.app.run_server(debug=True, port="8086", use_reloader=False)
-
 
 
 if __name__ == "__main__":
