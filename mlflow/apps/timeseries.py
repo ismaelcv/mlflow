@@ -1,5 +1,6 @@
 import os
 import pathlib
+from datetime import timedelta
 from typing import Tuple
 
 import dash_bootstrap_components as dbc
@@ -54,8 +55,22 @@ def define_training_content() -> list:
                         dbc.Row([dcc.Graph(id="cv_graph", style={"height": "30vh", "width": "100%"})]),
                         dbc.Row(
                             [
-                                dbc.Label("Select number of crossval sets:"),
-                                dcc.Slider(min=3, max=10, value=5, id="cv_slider"),
+                                dbc.Col(
+                                    [
+                                        dbc.Label("Select number of crossval sets:"),
+                                        dcc.Slider(min=3, max=10, value=5, id="cv_slider"),
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        dbc.Label("Select Validation set %:"),
+                                        dcc.Dropdown(
+                                            options=["40%", "30%", "20%", "10%", "5%"],
+                                            value="20%",
+                                            id="val_perc_dropdown",
+                                        ),
+                                    ]
+                                ),
                             ]
                         ),
                     ]
@@ -72,6 +87,31 @@ dashApp = dashApp.add_controls(define_app_controls()).add_training_content(defin
 
 @dashApp.app.callback(
     Output("cv_graph", "figure"),
+    Output("val_perc_dropdown", "value"),
+    [
+        Input("val_perc_dropdown", "value"),
+        Input("cv_slider", "value"),
+    ],
+)
+def update_cv_plot(
+    val_perc_str: str,
+    no_of_cv_sets: float,
+) -> Tuple[make_subplots, str]:
+    """
+    Update the training panel
+    """
+
+    if val_perc_str is None:
+        val_perc_str = "20%"
+
+    val_perc = int(val_perc_str.replace("%", "")) / 100
+
+    cv_fig = _plot_cv_sets(int(no_of_cv_sets), val_perc)
+
+    return cv_fig, val_perc_str
+
+
+@dashApp.app.callback(
     Output("dataset_dropdown", "options"),
     Output("dataset_dropdown", "value"),
     Output("timestamp_dropdown", "options"),
@@ -88,7 +128,6 @@ dashApp = dashApp.add_controls(define_app_controls()).add_training_content(defin
         Input("categorical_dropdown", "value"),
         Input("numerical_dropdown", "value"),
         Input("target_dropdown", "value"),
-        Input("cv_slider", "value"),
     ],
 )
 def update_training_panel(
@@ -97,15 +136,13 @@ def update_training_panel(
     categorical_variables: list,
     numerical_variables: list,
     target_variable: str,
-    no_of_cv_sets: float,
-) -> Tuple[make_subplots, list, str, list, str, list, list, list, list, list, str]:
+) -> Tuple[list, str, list, str, list, list, list, list, list, str]:
     """
     Update the training panel
     """
 
     panel_outcome = (
-        _plot_cv_sets(int(no_of_cv_sets))
-        + _load_dataset(dataset_filename)
+        _load_dataset(dataset_filename)
         + _select_timestamp_column(timestamp_column)
         + _select_categorical_variables(categorical_variables)
         + _select_numerical_variables(numerical_variables)
@@ -115,13 +152,13 @@ def update_training_panel(
     return tuple(panel_outcome)  # type: ignore
 
 
-def _plot_cv_sets(n_cv_sets: int) -> list:
+def _plot_cv_sets(n_cv_sets: int, val_perc: float) -> list:
     cv_fig = make_subplots()
 
     if len(dashApp.X_y) == 0:
         return [cv_fig]
 
-    X_y_dict = split_in_CV_sets(dashApp.X_y, n_cv_sets, 0.2)
+    X_y_dict = split_in_CV_sets(dashApp.X_y, n_cv_sets, val_perc)
 
     traces_to_plot = []
 
@@ -136,7 +173,17 @@ def _plot_cv_sets(n_cv_sets: int) -> list:
                 "line_color": "#1890ff",
                 "mode": "lines",
                 "line_width": 2,
-            }
+                "showlegend": False,
+            },
+            {
+                "x": [dashApp.X_y.ts.min() - timedelta(minutes=75)],
+                "y": [i],
+                "mode": "text",
+                "text": key,
+                "textposition": "top left",
+                "textfont": {"size": 16},
+                "showlegend": False,
+            },
         ]
 
         i += 1
@@ -144,7 +191,7 @@ def _plot_cv_sets(n_cv_sets: int) -> list:
     for trace in traces_to_plot:
         cv_fig.add_trace(go.Scatter(**trace))
 
-    return [cv_fig]
+    return cv_fig
 
 
 def _select_target_variable(target_variable: str) -> list:
