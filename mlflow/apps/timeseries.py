@@ -10,6 +10,7 @@ from dash.dependencies import Input, Output
 from plotly.subplots import make_subplots
 
 from mlflow.apps.BaseDashApp import BaseDashApp
+from mlflow.models.model_utils import split_in_CV_sets
 
 DATASETS_PATH = pathlib.Path(__file__).parents[2] / "data" / "datasets"
 
@@ -120,16 +121,25 @@ def _plot_cv_sets(n_cv_sets: int) -> list:
     if len(dashApp.X_y) == 0:
         return [cv_fig]
 
-    traces_to_plot = [
-        {
-            "x": [dashApp.X_y.ts.min(), dashApp.X_y.ts.max()],
-            "y": [i + 1, i + 1],
-            "line_color": "#1890ff",
-            "mode": "lines",
-            "line_width": 2,
-        }
-        for i in range(n_cv_sets)
-    ]
+    X_y_dict = split_in_CV_sets(dashApp.X_y, n_cv_sets, 0.2)
+
+    traces_to_plot = []
+
+    i = 1
+    for key, value in X_y_dict.items():
+        X_y = value["X_y"]
+
+        traces_to_plot += [
+            {
+                "x": [X_y.ts.min(), X_y.ts.max()],
+                "y": [i + 1, i + 1],
+                "line_color": "#1890ff",
+                "mode": "lines",
+                "line_width": 2,
+            }
+        ]
+
+        i += 1
 
     for trace in traces_to_plot:
         cv_fig.add_trace(go.Scatter(**trace))

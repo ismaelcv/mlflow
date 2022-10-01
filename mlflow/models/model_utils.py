@@ -3,7 +3,6 @@ from typing import Tuple, Union
 
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import LabelEncoder, MinMaxScaler
 
 
 def enforce_ts_completeness(X: pd.DataFrame, freq: str) -> pd.DataFrame:
@@ -24,50 +23,11 @@ def enforce_ts_completeness(X: pd.DataFrame, freq: str) -> pd.DataFrame:
     return X
 
 
-def encode_categorical_variables(X: pd.DataFrame) -> pd.DataFrame:
-    """
-    This function encodes the categorical variables to numerical
-
-    """
-
-    categorical_encoders = {}
-
-    for col, datatype in X.dtypes.items():
-        if col == "ts":
-            continue
-
-        if datatype == "object":
-            encoder = LabelEncoder()
-            X = X.assign(**{col: encoder.fit_transform(X[col])})
-            categorical_encoders[col] = encoder
-
-    return X, categorical_encoders
-
-
-def scale_variables(X_y: pd.DataFrame) -> pd.DataFrame:
-    """
-    This function scales all variables between 0 and 1
-    It assumes encode_categorical_variables has been performed before
-
-    """
-
-    scalers = {}
-
-    for col, datatype in X_y.dtypes.items():
-        if col == "ts":
-            continue
-
-        if datatype in [int, float]:
-            scaler = MinMaxScaler(feature_range=(0, 1))
-            X_y = X_y.assign(**{col: scaler.fit_transform(X_y[[col]].values)})
-            scalers[col] = scaler
-
-    return X_y, scalers
-
-
 def split_in_CV_sets(X_y: pd.DataFrame, n_splits: int, val_size_perc: float = 0.1) -> dict:
     """
-    CV Split
+    This function splits a dataset into n CV sets and includes a validation set at the end of the
+    timeseries.
+    It returns a dictionary including all sets
     """
     X_y_dict = {}
 
