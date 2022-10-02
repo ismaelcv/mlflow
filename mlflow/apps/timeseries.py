@@ -52,7 +52,7 @@ def define_training_content() -> list:
                 ),
                 dbc.Col(
                     [
-                        dbc.Row([dcc.Graph(id="cv_graph", style={"height": "30vh", "width": "100%"})]),
+                        dbc.Row([dcc.Graph(id="cv_graph", style={"height": "40vh", "width": "50vh"})]),
                         dbc.Row(
                             [
                                 dbc.Col(
@@ -162,6 +162,9 @@ def _plot_cv_sets(n_cv_sets: int, val_perc: float) -> list:
 
     traces_to_plot = []
 
+    y_left_margin = ((dashApp.X_y.ts.max() - dashApp.X_y.ts.min()).total_seconds() * 0.15) / 3600
+    text_pos = ((dashApp.X_y.ts.max() - dashApp.X_y.ts.min()).total_seconds() * 0.1) / 3600
+
     i = 1
     for key, value in X_y_dict.items():
         X_y = value["X_y"]
@@ -176,12 +179,11 @@ def _plot_cv_sets(n_cv_sets: int, val_perc: float) -> list:
                 "showlegend": False,
             },
             {
-                "x": [dashApp.X_y.ts.min() - timedelta(minutes=75)],
-                "y": [i],
+                "x": [dashApp.X_y.ts.min() - timedelta(hours=text_pos)],
+                "y": [i + 1],
                 "mode": "text",
                 "text": key,
-                "textposition": "top left",
-                "textfont": {"size": 16},
+                "textfont": {"size": 13},
                 "showlegend": False,
             },
         ]
@@ -191,7 +193,19 @@ def _plot_cv_sets(n_cv_sets: int, val_perc: float) -> list:
     for trace in traces_to_plot:
         cv_fig.add_trace(go.Scatter(**trace))
 
-    return cv_fig
+    return cv_fig.update_layout(
+        {
+            "legend": None,
+            "paper_bgcolor": "rgba(255,255,255,1)",
+            "plot_bgcolor": "rgba(255,255,255,1)",
+            "xaxis": dict(
+                showgrid=True, linewidth=1, linecolor="black", gridcolor="rgba(100,100,100,.07)", gridwidth=1
+            ),
+            "yaxis": {"visible": False, "showticklabels": False},
+            "xaxis_range": [dashApp.X_y.ts.min() - timedelta(hours=y_left_margin), dashApp.X_y.ts.max()],
+            "yaxis_range": [1, i + 1],
+        }
+    )
 
 
 def _select_target_variable(target_variable: str) -> list:

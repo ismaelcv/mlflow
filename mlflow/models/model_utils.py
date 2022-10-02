@@ -34,12 +34,12 @@ def split_in_CV_sets(X_y: pd.DataFrame, n_splits: int, val_size_perc: float = 0.
     df_size = len(X_y)
 
     val_size = int(df_size * val_size_perc)
-    X_y_dict["val_split"] = {"X_y": X_y.iloc[df_size - val_size :]}
+    X_y_dict["val"] = {"X_y": X_y.iloc[df_size - val_size :]}
 
     obs_per_cv_split = int((df_size - val_size) / n_splits)
 
     for i in range(n_splits):
-        X_y_dict[f"X_y_{i}"] = {"X_y": X_y.iloc[i * obs_per_cv_split : (i + 1) * obs_per_cv_split]}
+        X_y_dict[f"cv{i}"] = {"X_y": X_y.iloc[i * obs_per_cv_split : (i + 1) * obs_per_cv_split]}
 
     return X_y_dict
 
@@ -52,7 +52,7 @@ def create_X_and_y_per_cv_split(X_y_dict: dict) -> dict:
     for item, X_y in X_y_dict.items():
         X_y = X_y["X_y"].sort_values("ts").reset_index(drop=True).drop(columns=["ts"])
 
-        if item == "val_split":
+        if item == "val":
             X_val, y_val = create_supervised_array(
                 X_y,
                 number_of_samples=400,
