@@ -4,14 +4,13 @@ from datetime import timedelta
 from typing import Tuple
 
 import dash_bootstrap_components as dbc
-import pandas as pd
 import plotly.graph_objects as go
 from dash import dcc, html
 from dash.dependencies import Input, Output
 from plotly.subplots import make_subplots
 
 from mlflow.apps.BaseDashApp import BaseDashApp
-from mlflow.models.model_utils import split_in_CV_sets
+from mlflow.models.model_utils import get_train_and_test_split_dt, split_in_CV_sets
 
 DATASETS_PATH = pathlib.Path(__file__).parents[2] / "data" / "datasets"
 
@@ -178,20 +177,36 @@ def _plot_cv_sets(n_cv_sets: int, val_perc: float) -> list:
 
     X_y_dict = split_in_CV_sets(dashApp.X_y, n_cv_sets, val_perc)
 
+    # TODO: Remove ts here for dashapp.timestamp
+    # TODO: add train/test split dropdown
+
+    X_y_dict = get_train_and_test_split_dt(X_y_dict, "ts")
+
     traces_to_plot = []
 
     y_left_margin = ((dashApp.X_y.ts.max() - dashApp.X_y.ts.min()).total_seconds() * 0.15) / 3600
     text_pos = ((dashApp.X_y.ts.max() - dashApp.X_y.ts.min()).total_seconds() * 0.1) / 3600
 
     i = 1
-    for key, value in X_y_dict.items():
-        X_y = value["X_y"]
+    for key, cv_set in X_y_dict.items():
+        X_y = cv_set["X_y"]
+        split_dt = cv_set["train_test_split_dt"]
 
         traces_to_plot += [
             {
-                "x": [X_y.ts.min(), X_y.ts.max()],
+                # TODO: Remove ts here for dashapp.timestamp
+                "x": [X_y[X_y.ts < split_dt].ts.min(), X_y[X_y.ts < split_dt].ts.max()],
                 "y": [i + 1, i + 1],
                 "line_color": "#1890ff",
+                "mode": "lines",
+                "line_width": 2,
+                "showlegend": False,
+            },
+            {
+                # TODO: Remove ts here for dashapp.timestamp
+                "x": [X_y[X_y.ts >= split_dt].ts.min(), X_y[X_y.ts >= split_dt].ts.max()],
+                "y": [i + 1, i + 1],
+                "line_color": "red",
                 "mode": "lines",
                 "line_width": 2,
                 "showlegend": False,
@@ -233,11 +248,14 @@ def _select_target_variable(target_variable: str) -> list:
 
     col_list = [item[0] for item in dashApp.X_y.dtypes.items() if item[1] in ["float", "int"]]
 
-    if len(col_list) == 0:
+    if (len(col_list) == 0) | dashApp.reset_dataset_values:
+        dashApp.reset_dataset_values = False
         return [[], ""]
 
     if target_variable is None:
         target_variable = ""
+
+    dashApp.target_variable = target_variable
 
     return [col_list, target_variable]
 
@@ -249,11 +267,13 @@ def _select_numerical_variables(numerical_variables: list) -> list:
 
     col_list = [item[0] for item in dashApp.X_y.dtypes.items() if item[1] in ["float", "int"]]
 
-    if len(col_list) == 0:
+    if (len(col_list) == 0) | dashApp.reset_dataset_values:
         return [[], []]
 
     if numerical_variables is None:
         numerical_variables = []
+
+    dashApp.categorical_variables = numerical_variables
 
     return [col_list, numerical_variables]
 
@@ -265,11 +285,13 @@ def _select_categorical_variables(categorical_variables: list) -> list:
 
     col_list = [item[0] for item in dashApp.X_y.dtypes.items() if item[1] not in ["datetime64[ns]", "float", "int"]]
 
-    if len(col_list) == 0:
+    if (len(col_list) == 0) | (dashApp.reset_dataset_values):
         return [[], []]
 
     if categorical_variables is None:
         categorical_variables = []
+
+    dashApp.categorical_variables = categorical_variables
 
     return [col_list, categorical_variables]
 
@@ -281,11 +303,13 @@ def _select_timestamp_column(timestamp_column: str) -> list:
 
     col_list = [item[0] for item in dashApp.X_y.dtypes.items() if item[1] == "datetime64[ns]"]
 
-    if len(col_list) == 0:
+    if (len(col_list) == 0) | dashApp.reset_dataset_values:
         return [[], ""]
 
     if timestamp_column is None:
         timestamp_column = ""
+
+    dashApp.timestamp_column = timestamp_column
 
     return [col_list, timestamp_column]
 
@@ -303,11 +327,12 @@ def _load_dataset(dataset_filename: str) -> list:
     if dataset_filename == dashApp.dataset_filename:
         return [dataset_list, dataset_filename]
 
+    dashApp.reset_dataset_values = True
+
     if dataset_filename is None:
         dataset_filename = dataset_list[0]
 
-    dashApp.X_y = pd.read_parquet(DATASETS_PATH / dataset_filename)
-    dashApp.dataset_filename = dataset_filename
+    dashApp.reset_values(dataset_filename)
 
     return [dataset_list, dataset_filename]
 

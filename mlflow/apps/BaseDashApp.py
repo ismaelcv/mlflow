@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import os
+import pathlib
 
 import dash
 import dash_bootstrap_components as dbc
 import pandas as pd
 from dash import dcc, html
 
-# import pathlib
+DATASETS_PATH = pathlib.Path(__file__).parents[2] / "data" / "datasets"
 
 
 class BaseDashApp:  # pylint: disable = too-many-instance-attributes
@@ -16,13 +17,17 @@ class BaseDashApp:  # pylint: disable = too-many-instance-attributes
     """
 
     def __init__(self) -> None:
+        self.timestamp_column = ""  # type:str
         self.results_content = []  # type: list
         self.training_content = []  # type: list
         self.controls = []  # type: list
         self.dataset_filename = ""  # type: str
-        self.experiment_overview = pd.DataFrame()
         self.X_y = pd.DataFrame()
         self.app = None  # type: dash.Dash
+        self.categorical_variables = []  # type: list
+        self.numerical_variables = []  # type: list
+        self.target_variable = ""  # type:str
+        self.reset_dataset_values = False
 
     def add_controls(self, controls: list) -> BaseDashApp:
         """
@@ -33,6 +38,19 @@ class BaseDashApp:  # pylint: disable = too-many-instance-attributes
         self.controls = controls
 
         return self
+
+    def reset_values(self, dataset_filename: str) -> None:
+        """
+        Auxiliary function to reset the values when a new dataset is selected
+        """
+
+        self.timestamp_column = ""
+        self.target_variable = ""
+        self.dataset_filename = dataset_filename
+        self.X_y = pd.read_parquet(DATASETS_PATH / dataset_filename)
+        self.dataset_filename = dataset_filename
+        self.categorical_variables = []
+        self.numerical_variables = []
 
     def add_training_content(self, content: list) -> BaseDashApp:
         """

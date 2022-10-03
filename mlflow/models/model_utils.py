@@ -44,48 +44,48 @@ def split_in_CV_sets(X_y: pd.DataFrame, n_splits: int, val_size_perc: float = 0.
     return X_y_dict
 
 
-def create_X_and_y_per_cv_split(X_y_dict: dict) -> dict:
+# def create_X_and_y_per_cv_split(X_y_dict: dict) -> dict:
+#     """
+#     Split in cv
+
+#     """
+#     for item, X_y in X_y_dict.items():
+#         X_y = X_y["X_y"].sort_values("ts").reset_index(drop=True).drop(columns=["ts"])
+
+
+#         X_train, y_train, X_test, y_test = create_supervised_split(
+#                 X_y,
+#                 number_of_training_samples=1000,
+#                 number_of_testing_samples=200,
+#                 target_variable="pollution",
+#                 days_of_training=30,
+#                 days_of_prediction=1,
+#                 observations_per_hour=1,
+#             )
+
+#             X_y_dict[item] = {
+#                 "X_train": X_train,
+#                 "y_train": y_train,
+#                 "X_test": X_test,
+#                 "y_test": y_test,
+#                 **X_y_dict[item],
+#             }
+
+#     return X_y_dict
+
+
+def get_train_and_test_split_dt(X_y_dict: dict, timemstamp_column: str, training_ratio: float = 0.3) -> dict:
     """
     Split in cv
 
     """
-    for item, X_y in X_y_dict.items():
-        X_y = X_y["X_y"].sort_values("ts").reset_index(drop=True).drop(columns=["ts"])
+    for key, cv_split in X_y_dict.items():
+        X_y = cv_split["X_y"].sort_values("ts")
 
-        if item == "val":
-            X_val, y_val = create_supervised_array(
-                X_y,
-                number_of_samples=400,
-                target_variable="pollution",
-                days_of_training=30,
-                days_of_prediction=1,
-                observations_per_hour=1,
-            )
-
-            X_y_dict[item] = {
-                "X_val": X_val,
-                "y_val": y_val,
-                **X_y_dict[item],
-            }
-
-        else:
-            X_train, y_train, X_test, y_test = create_supervised_split(
-                X_y,
-                number_of_training_samples=1000,
-                number_of_testing_samples=200,
-                target_variable="pollution",
-                days_of_training=30,
-                days_of_prediction=1,
-                observations_per_hour=1,
-            )
-
-            X_y_dict[item] = {
-                "X_train": X_train,
-                "y_train": y_train,
-                "X_test": X_test,
-                "y_test": y_test,
-                **X_y_dict[item],
-            }
+        train_test_split_dt = X_y.sort_values(timemstamp_column).iloc[int(len(X_y) * (1 - training_ratio))][
+            timemstamp_column
+        ]
+        X_y_dict[key] = {**X_y_dict[key], "train_test_split_dt": train_test_split_dt}
 
     return X_y_dict
 
