@@ -40,14 +40,26 @@ def define_training_content() -> list:
                         html.Br(),
                         dbc.Label("Select Dataset:"),
                         dcc.Dropdown(id="dataset_dropdown"),
-                        dbc.Label("Select timestamp column:"),
-                        dcc.Dropdown(id="timestamp_dropdown"),
-                        dbc.Label("Select categorical variables:"),
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    [
+                                        dbc.Label("Timestamp column:"),
+                                        dcc.Dropdown(id="timestamp_dropdown"),
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        dbc.Label("Target variable:"),
+                                        dcc.Dropdown(id="target_dropdown"),
+                                    ]
+                                ),
+                            ]
+                        ),
+                        dbc.Label("Categorical variables:"),
                         dcc.Dropdown(id="categorical_dropdown", multi=True),
-                        dbc.Label("Select numerical variables:"),
+                        dbc.Label("Numerical variables:"),
                         dcc.Dropdown(id="numerical_dropdown", multi=True),
-                        dbc.Label("Select target variable:"),
-                        dcc.Dropdown(id="target_dropdown"),
                     ]
                 ),
                 dbc.Col(
@@ -57,13 +69,19 @@ def define_training_content() -> list:
                             [
                                 dbc.Col(
                                     [
-                                        dbc.Label("Select number of crossval sets:"),
-                                        dcc.Slider(min=3, max=10, value=5, id="cv_slider"),
+                                        dbc.Label("No. of crossval sets:"),
+                                        dcc.Slider(
+                                            min=3,
+                                            max=10,
+                                            value=5,
+                                            marks={3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9", 10: "10"},
+                                            id="cv_slider",
+                                        ),
                                     ]
                                 ),
                                 dbc.Col(
                                     [
-                                        dbc.Label("Select Validation set %:"),
+                                        dbc.Label("Validation set ratio:"),
                                         dcc.Dropdown(
                                             options=["40%", "30%", "20%", "10%", "5%"],
                                             value="20%",
