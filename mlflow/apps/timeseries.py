@@ -80,11 +80,21 @@ def define_training_content() -> list:
                                 ),
                                 dbc.Col(
                                     [
-                                        dbc.Label("Validation set ratio:"),
+                                        dbc.Label("Validation set size:"),
                                         dcc.Dropdown(
                                             options=["40%", "30%", "20%", "10%", "5%"],
                                             value="20%",
                                             id="val_perc_dropdown",
+                                        ),
+                                    ]
+                                ),
+                                dbc.Col(
+                                    [
+                                        dbc.Label("Train/Test split:"),
+                                        dcc.Dropdown(
+                                            options=["60/40%", "70/30%", "80/20%", "90/10%", "95/5%"],
+                                            value="70/30%",
+                                            id="train_test_dropdown",
                                         ),
                                     ]
                                 ),
@@ -105,27 +115,34 @@ dashApp = dashApp.add_controls(define_app_controls()).add_training_content(defin
 @dashApp.app.callback(
     Output("cv_graph", "figure"),
     Output("val_perc_dropdown", "value"),
+    Output("train_test_dropdown", "value"),
     [
         Input("val_perc_dropdown", "value"),
+        Input("train_test_dropdown", "value"),
         Input("cv_slider", "value"),
     ],
 )
 def update_cv_plot(
     val_perc_str: str,
+    train_test_perc_str: str,
     no_of_cv_sets: float,
 ) -> Tuple[make_subplots, str]:
     """
     Update the training panel
     """
 
+    if train_test_perc_str is None:
+        train_test_perc_str = "70/30%"
+    
     if val_perc_str is None:
         val_perc_str = "20%"
 
     val_perc = int(val_perc_str.replace("%", "")) / 100
+    test_perc = 1- int(train_test_perc_str.split("/")[0]) / 100
 
-    cv_fig = _plot_cv_sets(int(no_of_cv_sets), val_perc)
+    cv_fig = _plot_cv_sets(int(no_of_cv_sets), val_perc,test_perc)
 
-    return cv_fig, val_perc_str
+    return cv_fig, val_perc_str,train_test_perc_str
 
 
 @dashApp.app.callback(
@@ -169,7 +186,7 @@ def update_training_panel(
     return tuple(panel_outcome)  # type: ignore
 
 
-def _plot_cv_sets(n_cv_sets: int, val_perc: float) -> list:
+def _plot_cv_sets(n_cv_sets: int, val_perc: float, test_perc:float) -> list:
     cv_fig = make_subplots()
 
     if len(dashApp.X_y) == 0:
@@ -178,9 +195,8 @@ def _plot_cv_sets(n_cv_sets: int, val_perc: float) -> list:
     X_y_dict = split_in_CV_sets(dashApp.X_y, n_cv_sets, val_perc)
 
     # TODO: Remove ts here for dashapp.timestamp
-    # TODO: add train/test split dropdown
 
-    X_y_dict = get_train_and_test_split_dt(X_y_dict, "ts")
+    X_y_dict = get_train_and_test_split_dt(X_y_dict, "ts", test_perc)
 
     traces_to_plot = []
 
