@@ -159,6 +159,7 @@ def update_cv_plot(
     Output("numerical_dropdown", "value"),
     Output("target_dropdown", "options"),
     Output("target_dropdown", "value"),
+    Output("cv_slider", "value"),
     [
         Input("dataset_dropdown", "value"),
         Input("timestamp_dropdown", "value"),
@@ -173,7 +174,7 @@ def update_training_panel(
     categorical_variables: list,
     numerical_variables: list,
     target_variable: str,
-) -> Tuple[list, str, list, str, list, list, list, list, list, str]:
+) -> Tuple[list, str, list, str, list, list, list, list, list, str, float]:
     """
     Update the training panel
     """
@@ -184,6 +185,7 @@ def update_training_panel(
         + _select_categorical_variables(categorical_variables)
         + _select_numerical_variables(numerical_variables)
         + _select_target_variable(target_variable)
+        + [5.0]
     )
 
     return tuple(panel_outcome)  # type: ignore
