@@ -126,23 +126,26 @@ def update_cv_plot(
     val_perc_str: str,
     train_test_perc_str: str,
     no_of_cv_sets: float,
-) -> Tuple[make_subplots, str]:
+) -> Tuple[make_subplots, str, str]:
     """
     Update the training panel
     """
 
     if train_test_perc_str is None:
         train_test_perc_str = "70/30%"
-    
+
     if val_perc_str is None:
         val_perc_str = "20%"
 
     val_perc = int(val_perc_str.replace("%", "")) / 100
-    test_perc = 1- int(train_test_perc_str.split("/")[0]) / 100
+    test_perc = 1 - int(train_test_perc_str.split("/")[0]) / 100
 
-    cv_fig = _plot_cv_sets(int(no_of_cv_sets), val_perc,test_perc)
+    if dashApp.timestamp_column != "":
+        cv_fig = _plot_cv_sets(int(no_of_cv_sets), val_perc, test_perc)
+    else:
+        cv_fig = make_subplots()
 
-    return cv_fig, val_perc_str,train_test_perc_str
+    return cv_fig, val_perc_str, train_test_perc_str
 
 
 @dashApp.app.callback(
@@ -186,7 +189,7 @@ def update_training_panel(
     return tuple(panel_outcome)  # type: ignore
 
 
-def _plot_cv_sets(n_cv_sets: int, val_perc: float, test_perc:float) -> list:
+def _plot_cv_sets(n_cv_sets: int, val_perc: float, test_perc: float) -> list:
     cv_fig = make_subplots()
 
     if len(dashApp.X_y) == 0:
@@ -194,14 +197,18 @@ def _plot_cv_sets(n_cv_sets: int, val_perc: float, test_perc:float) -> list:
 
     X_y_dict = split_in_CV_sets(dashApp.X_y, n_cv_sets, val_perc)
 
-    # TODO: Remove ts here for dashapp.timestamp
-
-    X_y_dict = get_train_and_test_split_dt(X_y_dict, "ts", test_perc)
+    X_y_dict = get_train_and_test_split_dt(X_y_dict, dashApp.timestamp_column, test_perc)
 
     traces_to_plot = []
 
-    y_left_margin = ((dashApp.X_y.ts.max() - dashApp.X_y.ts.min()).total_seconds() * 0.15) / 3600
-    text_pos = ((dashApp.X_y.ts.max() - dashApp.X_y.ts.min()).total_seconds() * 0.1) / 3600
+    y_left_margin = (
+        (dashApp.X_y[dashApp.timestamp_column].max() - dashApp.X_y[dashApp.timestamp_column].min()).total_seconds()
+        * 0.15
+    ) / 3600
+    text_pos = (
+        (dashApp.X_y[dashApp.timestamp_column].max() - dashApp.X_y[dashApp.timestamp_column].min()).total_seconds()
+        * 0.1
+    ) / 3600
 
     i = 1
     for key, cv_set in X_y_dict.items():
@@ -210,8 +217,10 @@ def _plot_cv_sets(n_cv_sets: int, val_perc: float, test_perc:float) -> list:
 
         traces_to_plot += [
             {
-                # TODO: Remove ts here for dashapp.timestamp
-                "x": [X_y[X_y.ts < split_dt].ts.min(), X_y[X_y.ts < split_dt].ts.max()],
+                "x": [
+                    X_y[X_y[dashApp.timestamp_column] < split_dt][dashApp.timestamp_column].min(),
+                    X_y[X_y[dashApp.timestamp_column] < split_dt][dashApp.timestamp_column].max(),
+                ],
                 "y": [i + 1, i + 1],
                 "line_color": "#1890ff",
                 "mode": "lines",
@@ -219,8 +228,10 @@ def _plot_cv_sets(n_cv_sets: int, val_perc: float, test_perc:float) -> list:
                 "showlegend": False,
             },
             {
-                # TODO: Remove ts here for dashapp.timestamp
-                "x": [X_y[X_y.ts >= split_dt].ts.min(), X_y[X_y.ts >= split_dt].ts.max()],
+                "x": [
+                    X_y[X_y[dashApp.timestamp_column] >= split_dt][dashApp.timestamp_column].min(),
+                    X_y[X_y[dashApp.timestamp_column] >= split_dt][dashApp.timestamp_column].max(),
+                ],
                 "y": [i + 1, i + 1],
                 "line_color": "red",
                 "mode": "lines",
@@ -228,7 +239,7 @@ def _plot_cv_sets(n_cv_sets: int, val_perc: float, test_perc:float) -> list:
                 "showlegend": False,
             },
             {
-                "x": [dashApp.X_y.ts.min() - timedelta(hours=text_pos)],
+                "x": [dashApp.X_y[dashApp.timestamp_column].min() - timedelta(hours=text_pos)],
                 "y": [i + 1],
                 "mode": "text",
                 "text": key,
@@ -251,7 +262,10 @@ def _plot_cv_sets(n_cv_sets: int, val_perc: float, test_perc:float) -> list:
                 showgrid=True, linewidth=1, linecolor="black", gridcolor="rgba(100,100,100,.07)", gridwidth=1
             ),
             "yaxis": {"visible": False, "showticklabels": False},
-            "xaxis_range": [dashApp.X_y.ts.min() - timedelta(hours=y_left_margin), dashApp.X_y.ts.max()],
+            "xaxis_range": [
+                dashApp.X_y[dashApp.timestamp_column].min() - timedelta(hours=y_left_margin),
+                dashApp.X_y[dashApp.timestamp_column].max(),
+            ],
             "yaxis_range": [1, i + 1],
         }
     )
@@ -264,14 +278,14 @@ def _select_target_variable(target_variable: str) -> list:
 
     col_list = [item[0] for item in dashApp.X_y.dtypes.items() if item[1] in ["float", "int"]]
 
-    if (len(col_list) == 0) | dashApp.reset_dataset_values:
-        dashApp.reset_dataset_values = False
+    if len(col_list) == 0:
         return [[], ""]
 
-    if target_variable is None:
+    if (target_variable is None) | dashApp.reset_dataset_values:
         target_variable = ""
 
     dashApp.target_variable = target_variable
+    dashApp.reset_dataset_values = False
 
     return [col_list, target_variable]
 
@@ -283,13 +297,13 @@ def _select_numerical_variables(numerical_variables: list) -> list:
 
     col_list = [item[0] for item in dashApp.X_y.dtypes.items() if item[1] in ["float", "int"]]
 
-    if (len(col_list) == 0) | dashApp.reset_dataset_values:
+    if len(col_list) == 0:
         return [[], []]
 
-    if numerical_variables is None:
+    if (numerical_variables is None) | dashApp.reset_dataset_values:
         numerical_variables = []
 
-    dashApp.categorical_variables = numerical_variables
+    dashApp.numerical_variables = numerical_variables
 
     return [col_list, numerical_variables]
 
@@ -301,10 +315,10 @@ def _select_categorical_variables(categorical_variables: list) -> list:
 
     col_list = [item[0] for item in dashApp.X_y.dtypes.items() if item[1] not in ["datetime64[ns]", "float", "int"]]
 
-    if (len(col_list) == 0) | (dashApp.reset_dataset_values):
+    if len(col_list) == 0:
         return [[], []]
 
-    if categorical_variables is None:
+    if (categorical_variables is None) | dashApp.reset_dataset_values:
         categorical_variables = []
 
     dashApp.categorical_variables = categorical_variables
@@ -319,10 +333,10 @@ def _select_timestamp_column(timestamp_column: str) -> list:
 
     col_list = [item[0] for item in dashApp.X_y.dtypes.items() if item[1] == "datetime64[ns]"]
 
-    if (len(col_list) == 0) | dashApp.reset_dataset_values:
+    if len(col_list) == 0:
         return [[], ""]
 
-    if timestamp_column is None:
+    if (timestamp_column is None) | dashApp.reset_dataset_values:
         timestamp_column = ""
 
     dashApp.timestamp_column = timestamp_column
